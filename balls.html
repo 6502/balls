@@ -1,7 +1,6 @@
 <html>
-  <body style="padding:0px; margin:0px;">
-    <div id="scr" style="position:relative; background-color:#202020"
-        onmousedown="javascript:mouseDown(event)">
+  <body style="padding:0px; margin:0px; background-color:#000000">
+    <div id="scr" style="margin-left:auto; margin-right:auto; position:relative; background-color:#202020" onmousedown="javascript:mouseDown(event)">
     </div>
     <script>
 /****************************************************************************\
@@ -35,6 +34,7 @@ var n = 15, m = 25, sz = 32;
 var balls = [];
 var grid = {};
 var animation = [];
+var scores = [];
 var nframes = 5;
 var colors = ["red", "green", "blue", "yellow", "cyan", "magenta"];
 var src = document.getElementById("scr");
@@ -97,6 +97,26 @@ function updateAnimation()
         }
     }
     animation.splice(wp, animation.length);
+
+    wp = 0;
+    for (var i=0; i<scores.length; i++)
+    {
+        var s = scores[i];
+        s.frame = (s.frame|0) + 1;
+        if (s.frame == 20)
+        {
+            scr.removeChild(s);
+        }
+        else
+        {
+            s.style.fontSize = s.frame*5 + "px";
+            s.style.left = (parseInt(s.style.left) - s.frame/4) + "px";
+            s.style.top = (parseInt(s.style.top) - s.frame/4) + "px";
+            s.style.opacity = 1 / (1 + s.frame/5);
+            scores[wp++] = s;
+        }
+    }
+    scores.splice(wp, scores.length);
 }
 
 function makeBoard()
@@ -142,12 +162,15 @@ function hit(x, y)
     {
         var todo = [[x, y]];
         var removed = [];
+        var ax = 0, ay = 0;
         while (todo.length > 0)
         {
             var xy = todo.pop();
             x = xy[0]; y = xy[1];
             if (grid[y+"/"+x][0] == c)
             {
+                ax += sz/2 + x*sz;
+                ay += sz/2 + y*sz;
                 removed.push(grid[y+"/"+x][1]);
                 grid[y+"/"+x][0] = undefined;
                 if (x > 0)   todo.push([x-1, y]);
@@ -156,6 +179,21 @@ function hit(x, y)
                 if (y < n-1) todo.push([x, y+1]);
             }
         }
+
+        var scorediv = document.createElement("div");
+        var lr = removed.length;
+        scorediv.style.color = "#FFFFFF";
+        scorediv.style.fontSize = "5px";
+        scorediv.style.fontFamily = "Arial";
+        scorediv.style.fontWeight = "bold";
+        scorediv.style.opacity = 1.0;
+        scorediv.style.position = "absolute";
+        scorediv.style.left = ax/lr + "px";
+        scorediv.style.top= ay/lr + "px";
+        scorediv.innerHTML = "" + (lr*lr*5);
+        scr.appendChild(scorediv);
+        scores.push(scorediv);
+
         var wp = 0;
         for (var i=0; i<balls.length; i++)
         {
@@ -196,8 +234,8 @@ function hit(x, y)
 function mouseDown(e)
 {
     e.preventDefault && e.preventDefault();
-    var y = Math.floor((e.clientY - sz/2) / sz);
-    var x = Math.floor((e.clientX - sz/2) / sz);
+    var y = Math.floor((e.clientY - sz/2 - scr.offsetTop) / sz);
+    var x = Math.floor((e.clientX - sz/2 - src.offsetLeft) / sz);
     if (grid[y+"/"+x] != undefined)
         hit(x, y);
     return false;
