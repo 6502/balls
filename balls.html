@@ -1,6 +1,8 @@
 <html>
-  <body style="position:absolute; background-color:#202020"
-      onmousedown="javascript:mouseDown(event)">
+  <body style="padding:0px; margin:0px;">
+    <div id="scr" style="position:relative; background-color:#202020"
+        onmousedown="javascript:mouseDown(event)">
+    </div>
     <script>
 /****************************************************************************\
 ******************************************************************************
@@ -33,17 +35,18 @@ var n = 15, m = 25, sz = 32;
 var balls = [];
 var grid = {};
 var animation = [];
-var nframes = 10;
+var nframes = 5;
 var colors = ["red", "green", "blue", "yellow", "cyan", "magenta"];
+var src = document.getElementById("scr");
 
 function newBall(color, x, y)
 {
     var ball = document.createElement("img");
     ball.src = "ball-" + color + ".png";
     ball.style.position = "absolute";
-    ball.style.left = x + "px";
-    ball.style.top = y + "px";
-    document.body.appendChild(ball);
+    ball.style.left = (sz/2 + x) + "px";
+    ball.style.top = (sz/2 + y) + "px";
+    scr.appendChild(ball);
     return ball;
 }
 
@@ -51,12 +54,12 @@ function newCell(x, y)
 {
     var cell = document.createElement("div");
     cell.style.position = "absolute";
-    cell.style.width = (sz-2) + "px";
-    cell.style.height = (sz-2) + "px";
-    cell.style.left = (x+1) + "px";
-    cell.style.top = (y+1) + "px";
+    cell.style.width = (sz - 2) + "px";
+    cell.style.height = (sz - 2) + "px";
+    cell.style.left = (sz/2 + x + 1) + "px";
+    cell.style.top = (sz/2 + y + 1) + "px";
     cell.style.backgroundColor = "#404040";
-    document.body.appendChild(cell);
+    scr.appendChild(cell);
     return cell;
 }
 
@@ -71,16 +74,27 @@ function Animation(ball, y0, y1)
 function updateAnimation()
 {
     var wp = 0;
-    var changed = animation.length > 0;
+    var step = 1;
     for (var i=0; i<animation.length; i++)
     {
         var a = animation[i];
-        var f = ++a.frame;
-        var s = f/nframes;
-        var t = 3*s*s - 2*s*s*s;
-        a.ball.style.top = a.y0+t*(a.y1 - a.y0) + "px";
-        if (s < 1)
-            animation[wp++] = a;
+        if (a == null)
+        {
+            if (i > 0)
+            {
+                step = 0;
+                animation[wp++] = null;
+            }
+        }
+        else
+        {
+            var f = (a.frame += step);
+            var s = f/nframes;
+            var t = 3*s*s - 2*s*s*s;
+            a.ball.style.top = a.y0+t*(a.y1 - a.y0) + "px";
+            if (s < 1)
+                animation[wp++] = a;
+        }
     }
     animation.splice(wp, animation.length);
 }
@@ -94,13 +108,15 @@ function makeBoard()
             newCell(j*sz, i*sz);
         }
     }
+    scr.style.width = (m + 1)*sz + "px";
+    src.style.height = (n + 1)*sz + "px";
 }
 
 function fillGrid()
 {
     for (var i=0; i<balls.length; i++)
     {
-        document.body.removeChild(balls[i]);
+        scr.removeChild(balls[i]);
     }
     balls = [];
     for (var i=0; i<n; i++)
@@ -125,12 +141,14 @@ function hit(x, y)
          (x<m-1 && grid[y+"/"+(x+1)][0] == c)))
     {
         var todo = [[x, y]];
+        var removed = [];
         while (todo.length > 0)
         {
             var xy = todo.pop();
             x = xy[0]; y = xy[1];
             if (grid[y+"/"+x][0] == c)
             {
+                removed.push(grid[y+"/"+x][1]);
                 grid[y+"/"+x][0] = undefined;
                 if (x > 0)   todo.push([x-1, y]);
                 if (x < m-1) todo.push([x+1, y]);
@@ -141,13 +159,13 @@ function hit(x, y)
         var wp = 0;
         for (var i=0; i<balls.length; i++)
         {
-            if (grid[(balls[i].offsetTop/sz)+"/"+(balls[i].offsetLeft/sz)][0] != undefined)
+            if (removed.indexOf(balls[i]) == -1)
             {
                 balls[wp++] = balls[i];
             }
             else
             {
-                document.body.removeChild(balls[i]);
+                scr.removeChild(balls[i]);
             }
         }
         balls.splice(wp, balls.length);
@@ -166,20 +184,23 @@ function hit(x, y)
                     grid[i+"/"+x][0] = undefined;
                     animation.push(new Animation(grid[y+"/"+x][1],
                                                  grid[y+"/"+x][1].y,
-                                                 y*sz));
+                                                 sz/2+y*sz));
                     --y;
                 }
             }
         }
+        animation.push(null);
     }
 }
 
 function mouseDown(e)
 {
-    var y = Math.floor(e.clientY / sz);
-    var x = Math.floor(e.clientX / sz);
+    e.preventDefault && e.preventDefault();
+    var y = Math.floor((e.clientY - sz/2) / sz);
+    var x = Math.floor((e.clientX - sz/2) / sz);
     if (grid[y+"/"+x] != undefined)
         hit(x, y);
+    return false;
 }
 
 makeBoard();
