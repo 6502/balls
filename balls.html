@@ -1,0 +1,192 @@
+<html>
+  <body style="position:absolute; background-color:#202020"
+      onmousedown="javascript:mouseDown(event)">
+    <script>
+/****************************************************************************\
+******************************************************************************
+**                                                                          **
+**  Copyright (c) 2011 by Andrea Griffini                                   **
+**                                                                          **
+**  Permission is hereby granted, free of charge, to any person obtaining   **
+**  a copy of this software and associated documentation files (the         **
+**  "Software"), to deal in the Software without restriction, including     **
+**  without limitation the rights to use, copy, modify, merge, publish,     **
+**  distribute, sublicense, and/or sell copies of the Software, and to      **
+**  permit persons to whom the Software is furnished to do so, subject to   **
+**  the following conditions:                                               **
+**                                                                          **
+**  The above copyright notice and this permission notice shall be          **
+**  included in all copies or substantial portions of the Software.         **
+**                                                                          **
+**  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,         **
+**  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF      **
+**  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND                   **
+**  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE  **
+**  LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION  **
+**  OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION   **
+**  WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.         **
+**                                                                          **
+******************************************************************************
+\****************************************************************************/
+
+var n = 15, m = 25, sz = 32;
+var balls = [];
+var grid = {};
+var animation = [];
+var nframes = 10;
+var colors = ["red", "green", "blue", "yellow", "cyan", "magenta"];
+
+function newBall(color, x, y)
+{
+    var ball = document.createElement("img");
+    ball.src = "ball-" + color + ".png";
+    ball.style.position = "absolute";
+    ball.style.left = x + "px";
+    ball.style.top = y + "px";
+    document.body.appendChild(ball);
+    return ball;
+}
+
+function newCell(x, y)
+{
+    var cell = document.createElement("div");
+    cell.style.position = "absolute";
+    cell.style.width = (sz-2) + "px";
+    cell.style.height = (sz-2) + "px";
+    cell.style.left = (x+1) + "px";
+    cell.style.top = (y+1) + "px";
+    cell.style.backgroundColor = "#404040";
+    document.body.appendChild(cell);
+    return cell;
+}
+
+function Animation(ball, y0, y1)
+{
+    this.ball = ball;
+    this.y0 = y0;
+    this.y1 = y1;
+    this.frame = 0;
+}
+
+function updateAnimation()
+{
+    var wp = 0;
+    var changed = animation.length > 0;
+    for (var i=0; i<animation.length; i++)
+    {
+        var a = animation[i];
+        var f = ++a.frame;
+        var s = f/nframes;
+        var t = 3*s*s - 2*s*s*s;
+        a.ball.style.top = a.y0+t*(a.y1 - a.y0) + "px";
+        if (s < 1)
+            animation[wp++] = a;
+    }
+    animation.splice(wp, animation.length);
+}
+
+function makeBoard()
+{
+    for (var i=0; i<n; i++)
+    {
+        for (var j=0; j<m; j++)
+        {
+            newCell(j*sz, i*sz);
+        }
+    }
+}
+
+function fillGrid()
+{
+    for (var i=0; i<balls.length; i++)
+    {
+        document.body.removeChild(balls[i]);
+    }
+    balls = [];
+    for (var i=0; i<n; i++)
+    {
+        for (var j=0; j<m; j++)
+        {
+            var c = Math.floor(Math.random() * colors.length);
+            var b = newBall(colors[c], j*sz, i*sz);
+            grid[i+"/"+j] = [c, b];
+            balls.push(b);
+        }
+    }
+}
+
+function hit(x, y)
+{
+    var c = grid[y+"/"+x][0];
+    if (c != undefined &&
+        ((y>0 && grid[(y-1)+"/"+x][0] == c) ||
+         (y<n-1 && grid[(y+1)+"/"+x][0] == c) ||
+         (x>0 && grid[y+"/"+(x-1)][0] == c) ||
+         (x<m-1 && grid[y+"/"+(x+1)][0] == c)))
+    {
+        var todo = [[x, y]];
+        while (todo.length > 0)
+        {
+            var xy = todo.pop();
+            x = xy[0]; y = xy[1];
+            if (grid[y+"/"+x][0] == c)
+            {
+                grid[y+"/"+x][0] = undefined;
+                if (x > 0)   todo.push([x-1, y]);
+                if (x < m-1) todo.push([x+1, y]);
+                if (y > 0)   todo.push([x, y-1]);
+                if (y < n-1) todo.push([x, y+1]);
+            }
+        }
+        var wp = 0;
+        for (var i=0; i<balls.length; i++)
+        {
+            if (grid[(balls[i].offsetTop/sz)+"/"+(balls[i].offsetLeft/sz)][0] != undefined)
+            {
+                balls[wp++] = balls[i];
+            }
+            else
+            {
+                document.body.removeChild(balls[i]);
+            }
+        }
+        balls.splice(wp, balls.length);
+
+        for (var x=0; x<m; x++)
+        {
+            y = n-1;
+            while (y>=0 && grid[y+"/"+x][0] != undefined)
+                --y;
+            for (var i=y-1; i>=0; --i)
+            {
+                if (grid[i+"/"+x][0] != undefined)
+                {
+                    grid[y+"/"+x][0] = grid[i+"/"+x][0];
+                    grid[y+"/"+x][1] = grid[i+"/"+x][1];
+                    grid[i+"/"+x][0] = undefined;
+                    animation.push(new Animation(grid[y+"/"+x][1],
+                                                 grid[y+"/"+x][1].y,
+                                                 y*sz));
+                    --y;
+                }
+            }
+        }
+    }
+}
+
+function mouseDown(e)
+{
+    var y = Math.floor(e.clientY / sz);
+    var x = Math.floor(e.clientX / sz);
+    if (grid[y+"/"+x] != undefined)
+        hit(x, y);
+}
+
+makeBoard();
+fillGrid();
+
+setInterval(updateAnimation, 50);
+
+    </script>
+  </body>
+</html>
