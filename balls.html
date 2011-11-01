@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html>
-  <body style="padding:0px; margin:0px; background-color:#000000">
+  <body style="font-family:Arial; font-size:24px; padding:0px; margin:0px; background-color:#000000">
     <div id="scr" style="margin-left:auto; margin-right:auto; position:relative; background-color:#202020" onmousedown="javascript:mouseDown(event)">
     </div>
+    <div id="score" style="width:100%; text-align:center; color:#FFFFFF;"></div>
     <audio id="music" src="DST-NoSleep.mp3" autoplay=true loop=true></audio>
     <script>
 /****************************************************************************\
@@ -32,14 +33,17 @@
 ******************************************************************************
 \****************************************************************************/
 
-var n = 15, m = 25, sz = 32;
+var n = 15, m = 20, sz = 32;
 var balls = [];
 var grid = {};
+var colcount = [];
 var animation = [];
 var scores = [];
 var nframes = 5;
 var colors = ["red", "green", "blue", "yellow", "cyan", "magenta"];
 var scr = document.getElementById("scr");
+var score = 0;
+var highscore = (localStorage && localStorage["balls_hs"]) || 0;
 
 function pop()
 {
@@ -87,10 +91,12 @@ function newCell(x, y)
     return cell;
 }
 
-function Animation(ball, y0, y1)
+function Animation(ball, x0, y0, x1, y1)
 {
     this.ball = ball;
+    this.x0 = x0;
     this.y0 = y0;
+    this.x1 = x1;
     this.y1 = y1;
     this.frame = 0;
 }
@@ -115,6 +121,7 @@ function updateAnimation()
             var f = (a.frame += step);
             var s = f/nframes;
             var t = 3*s*s - 2*s*s*s;
+            a.ball.style.left = a.x0+t*(a.x1 - a.x0) + "px";
             a.ball.style.top = a.y0+t*(a.y1 - a.y0) + "px";
             if (s < 1)
                 animation[wp++] = a;
@@ -150,15 +157,17 @@ function fillGrid()
         scr.removeChild(balls[i]);
     }
     balls = [];
-    for (var i=0; i<n; i++)
+    colcount = [];
+    for (var j=0; j<m; j++)
     {
-        for (var j=0; j<m; j++)
+        for (var i=0; i<n; i++)
         {
             var c = Math.floor(Math.random() * colors.length);
             var b = newBall(colors[c], j*sz, i*sz);
             grid[i+"/"+j] = [c, b];
             balls.push(b);
         }
+        colcount.push(n);
     }
 }
 
@@ -185,6 +194,7 @@ function hit(x, y)
                 ay += sz/2 + y*sz;
                 removed.push(grid[y+"/"+x][1]);
                 grid[y+"/"+x][0] = undefined;
+                colcount[x]--;
                 if (x > 0)   todo.push([x-1, y]);
                 if (x < m-1) todo.push([x+1, y]);
                 if (y > 0)   todo.push([x, y-1]);
@@ -205,6 +215,15 @@ function hit(x, y)
         scorediv.innerHTML = "" + (lr*lr*5);
         scr.appendChild(scorediv);
         scores.push(scorediv);
+        score += lr*lr*5;
+        if (highscore < score) {
+            highscore = score;
+            if (localStorage)
+                localStorage["ball_hs"] = highscore;
+        }
+
+        var sd = document.getElementById("score");
+        sd.innerHTML = "Score: " + score + "&nbsp;&nbsp;&nbsp;High score: " + highscore;
 
         var wp = 0;
         for (var i=0; i<balls.length; i++)
@@ -220,26 +239,86 @@ function hit(x, y)
         }
         balls.splice(wp, balls.length);
 
+        var nx = 0;
         for (var x=0; x<m; x++)
         {
-            y = n-1;
-            while (y>=0 && grid[y+"/"+x][0] != undefined)
-                --y;
-            for (var i=y-1; i>=0; --i)
+            if (colcount[x] > 0)
             {
-                if (grid[i+"/"+x][0] != undefined)
+                y = n-1;
+                while (y>=0 && grid[y+"/"+x][0] != undefined)
                 {
-                    grid[y+"/"+x][0] = grid[i+"/"+x][0];
-                    grid[y+"/"+x][1] = grid[i+"/"+x][1];
-                    grid[i+"/"+x][0] = undefined;
-                    animation.push(new Animation(grid[y+"/"+x][1],
-                                                 grid[y+"/"+x][1].y,
-                                                 sz/2+y*sz));
+                    if (x != nx)
+                    {
+                        grid[y+"/"+nx][0] = grid[y+"/"+x][0];
+                        grid[y+"/"+nx][1] = grid[y+"/"+x][1];
+                        grid[y+"/"+x][0] = undefined;
+                        animation.push(new Animation(grid[y+"/"+nx][1],
+                                                     sz/2+x*sz,
+                                                     sz/2+y*sz,
+                                                     sz/2+nx*sz,
+                                                     sz/2+y*sz));
+                    }
                     --y;
+                }
+                for (var i=y-1; i>=0; --i)
+                {
+                    if (grid[i+"/"+x][0] != undefined)
+                    {
+                        grid[y+"/"+nx][0] = grid[i+"/"+x][0];
+                        grid[y+"/"+nx][1] = grid[i+"/"+x][1];
+                        grid[i+"/"+x][0] = undefined;
+                        animation.push(new Animation(grid[y+"/"+nx][1],
+                                                     sz/2+x*sz,
+                                                     sz/2+i*sz,
+                                                     sz/2+nx*sz,
+                                                     sz/2+y*sz));
+                        --y;
+                    }
+                }
+                colcount[nx++] = colcount[x];
+            }
+        }
+        for (i=nx; i<m; i++)
+            colcount[i] = 0;
+        animation.push(null);
+
+        var gameover = true;
+        for (y=0; y<n && gameover; y++)
+        {
+            for (x=0; x<m && gameover; x++)
+            {
+                c = grid[y+"/"+x][0];
+                if (c != undefined &&
+                    ((y>0 && grid[(y-1)+"/"+x][0] == c) ||
+                     (y<n-1 && grid[(y+1)+"/"+x][0] == c) ||
+                     (x>0 && grid[y+"/"+(x-1)][0] == c) ||
+                     (x<m-1 && grid[y+"/"+(x+1)][0] == c)))
+                {
+                    gameover = false;
                 }
             }
         }
-        animation.push(null);
+        if (gameover)
+        {
+            var go = document.createElement("table");
+            go.innerHTML = "<tr><td valign=middle align=center>GAME OVER</td></tr>";
+            go.style.fontWeight = "bold";
+            go.style.fontFamily = "Arial";
+            go.style.fontSize = sz*2 + "px";
+            go.style.color = "#FFFFFF";
+            go.style.width = sz*(m+1) + "px";
+            go.style.height = sz*(n+1) + "px";
+            go.style.position = "absolute";
+            go.style.left = "0px";
+            go.style.top = "0px";
+            go.style.opacity = 0.0;
+            for (var i=0; i<=10; i++)
+            {
+                setTimeout((function(i){return function(){go.style.opacity=i/10;}})(i),i*100);
+            }
+            scr.appendChild(go);
+            setTimeout(function(){document.location="balls.html";},3000);
+        }
     }
 }
 
