@@ -1,7 +1,9 @@
+<!DOCTYPE html>
 <html>
   <body style="padding:0px; margin:0px; background-color:#000000">
     <div id="scr" style="margin-left:auto; margin-right:auto; position:relative; background-color:#202020" onmousedown="javascript:mouseDown(event)">
     </div>
+    <audio id="music" src="DST-NoSleep.mp3" autoplay=true loop=true></audio>
     <script>
 /****************************************************************************\
 ******************************************************************************
@@ -37,7 +39,29 @@ var animation = [];
 var scores = [];
 var nframes = 5;
 var colors = ["red", "green", "blue", "yellow", "cyan", "magenta"];
-var src = document.getElementById("scr");
+var scr = document.getElementById("scr");
+
+function pop()
+{
+    var s = document.createElement("audio");
+    s.src = "pop1.wav";
+    setTimeout(function(){document.body.removeChild(s);}, 1000);
+    document.body.appendChild(s);
+    s.play();
+}
+
+function makeBoard()
+{
+    for (var i=0; i<n; i++)
+    {
+        for (var j=0; j<m; j++)
+        {
+            newCell(j*sz, i*sz);
+        }
+    }
+    scr.style.width = (m + 1)*sz + "px";
+    scr.style.height = (n + 1)*sz + "px";
+}
 
 function newBall(color, x, y)
 {
@@ -119,19 +143,6 @@ function updateAnimation()
     scores.splice(wp, scores.length);
 }
 
-function makeBoard()
-{
-    for (var i=0; i<n; i++)
-    {
-        for (var j=0; j<m; j++)
-        {
-            newCell(j*sz, i*sz);
-        }
-    }
-    scr.style.width = (m + 1)*sz + "px";
-    src.style.height = (n + 1)*sz + "px";
-}
-
 function fillGrid()
 {
     for (var i=0; i<balls.length; i++)
@@ -160,6 +171,7 @@ function hit(x, y)
          (x>0 && grid[y+"/"+(x-1)][0] == c) ||
          (x<m-1 && grid[y+"/"+(x+1)][0] == c)))
     {
+        pop();
         var todo = [[x, y]];
         var removed = [];
         var ax = 0, ay = 0;
@@ -235,7 +247,7 @@ function mouseDown(e)
 {
     e.preventDefault && e.preventDefault();
     var y = Math.floor((e.clientY - sz/2 - scr.offsetTop) / sz);
-    var x = Math.floor((e.clientX - sz/2 - src.offsetLeft) / sz);
+    var x = Math.floor((e.clientX - sz/2 - scr.offsetLeft) / sz);
     if (grid[y+"/"+x] != undefined)
         hit(x, y);
     return false;
