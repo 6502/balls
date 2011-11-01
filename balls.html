@@ -4,7 +4,7 @@
     <div id="scr" style="margin-left:auto; margin-right:auto; position:relative; background-color:#202020" onmousedown="javascript:mouseDown(event)">
     </div>
     <div id="score" style="width:100%; text-align:center; color:#FFFFFF;"></div>
-    <audio id="music" src="DST-NoSleep.mp3" autoplay=true loop=true></audio>
+    <audio id="music" src="music.mp3" autoplay=true loop=true></audio>
     <script>
 /****************************************************************************\
 ******************************************************************************
@@ -169,6 +169,9 @@ function fillGrid()
         }
         colcount.push(n);
     }
+    score = 0;
+    var sd = document.getElementById("score");
+    sd.innerHTML = "Score: " + score + "&nbsp;&nbsp;&nbsp;High score: " + highscore;
 }
 
 function hit(x, y)
@@ -219,7 +222,7 @@ function hit(x, y)
         if (highscore < score) {
             highscore = score;
             if (localStorage)
-                localStorage["ball_hs"] = highscore;
+                localStorage["balls_hs"] = highscore;
         }
 
         var sd = document.getElementById("score");
@@ -317,7 +320,7 @@ function hit(x, y)
                 setTimeout((function(i){return function(){go.style.opacity=i/10;}})(i),i*100);
             }
             scr.appendChild(go);
-            setTimeout(function(){document.location="balls.html";},3000);
+            setTimeout(function(){ scr.removeChild(go); fillGrid(); }, 5000);
         }
     }
 }
