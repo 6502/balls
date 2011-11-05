@@ -33,7 +33,7 @@
 ******************************************************************************
 \****************************************************************************/
 
-var n = 15, m = 20, sz = 48;
+var n = 12, m = 16, sz = 48;
 var balls = [];
 var grid = {};
 var colcount = [];
@@ -68,7 +68,7 @@ function makeBoard()
     {
         for (var j=0; j<m; j++)
         {
-            newCell(j*sz, i*sz);
+            newCell(i, j);
         }
     }
     scr.style.width = (m + 1)*sz + "px";
@@ -86,14 +86,15 @@ function newBall(color, x, y)
     return ball;
 }
 
-function newCell(x, y)
+function newCell(y, x)
 {
     var cell = document.createElement("div");
+    cell.id = "c" + y + "_" + x;
     cell.style.position = "absolute";
     cell.style.width = (sz - 2) + "px";
     cell.style.height = (sz - 2) + "px";
-    cell.style.left = (sz/2 + x + 1) + "px";
-    cell.style.top = (sz/2 + y + 1) + "px";
+    cell.style.left = (sz/2 + x*sz + 1) + "px";
+    cell.style.top = (sz/2 + y*sz + 1) + "px";
     cell.style.backgroundColor = "#404040";
     scr.appendChild(cell);
     return cell;
@@ -185,6 +186,34 @@ function fillGrid()
     score = 0;
     var sd = document.getElementById("score");
     sd.innerHTML = "Score: " + score + "&nbsp;&nbsp;&nbsp;High score: " + highscore;
+    gameOver();
+}
+
+function gameOver()
+{
+    var gameover = true;
+    for (var y=0; y<n; y++)
+    {
+        for (var x=0; x<m; x++)
+        {
+            var cg = document.getElementById("c" + y + "_" + x);
+            c = grid[y+"/"+x][0];
+            if (c != undefined &&
+                ((y>0 && grid[(y-1)+"/"+x][0] == c) ||
+                 (y<n-1 && grid[(y+1)+"/"+x][0] == c) ||
+                 (x>0 && grid[y+"/"+(x-1)][0] == c) ||
+                 (x<m-1 && grid[y+"/"+(x+1)][0] == c)))
+            {
+                gameover = false;
+                cg.style.backgroundColor = "#606060";
+            }
+            else
+            {
+                cg.style.backgroundColor = "#404040";
+            }
+        }
+    }
+    return gameover;
 }
 
 function hit(x, y)
@@ -298,23 +327,7 @@ function hit(x, y)
             colcount[i] = 0;
         animation.push(null);
 
-        var gameover = true;
-        for (y=0; y<n && gameover; y++)
-        {
-            for (x=0; x<m && gameover; x++)
-            {
-                c = grid[y+"/"+x][0];
-                if (c != undefined &&
-                    ((y>0 && grid[(y-1)+"/"+x][0] == c) ||
-                     (y<n-1 && grid[(y+1)+"/"+x][0] == c) ||
-                     (x>0 && grid[y+"/"+(x-1)][0] == c) ||
-                     (x<m-1 && grid[y+"/"+(x+1)][0] == c)))
-                {
-                    gameover = false;
-                }
-            }
-        }
-        if (gameover)
+        if (gameOver())
         {
             var go = document.createElement("table");
             go.innerHTML = "<tr><td valign=middle align=center>GAME OVER</td></tr>";
